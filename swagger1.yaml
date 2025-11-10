@@ -1,0 +1,220 @@
+openapi: 3.0.4
+info:
+  title: SuperSparePartFinder3000 API
+  version: 0.0.1
+servers:
+ - url: http://localhost:8080/api/
+   description: dev server
+paths:
+  /session/start:
+    post:
+      summary: Метод получения токена для аутентификации последующих запросов
+      requestBody:
+        description: siteToken
+        required: true
+        content: 
+          application/json:
+            schema:
+              $ref: "#/components/schemas/siteToken"
+      responses:
+        '200':
+          description: Успешный запрос
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/sessionToken"
+        '401':
+          description: Некорректный или отсутствующий token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorInvalidToken"
+        'default':
+          description: "Все нестандартные ошибки: ошибки в запросе, сервер недоступен и т.д."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorDefault"
+  /message:
+    post:
+      security:
+       - BearerAuth: []
+      summary: Методя для отправки сообщения на сервер
+      requestBody:
+        description: Текст сообщения
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Message"
+      responses:
+        '200':
+          description: Успешный запрос
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StateMessageReceived"
+        '401':
+          description: Некорректный или отсутствующий token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorInvalidToken"
+        '429':
+          description: Достигнут лимит запросов для текущей сессии
+          content:
+            application/json:
+              schema:
+               oneOf:
+                - $ref: "#/components/schemas/ErrorRateLimitSession"
+                - $ref: "#/components/schemas/ErrorRateLimitUser"
+        'default':
+          description: "Все нестандартные ошибки: ошибки в запросе, сервер недоступен и т.д."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorDefault"
+  /events/stream:
+    get:
+      security:
+       - BearerAuth: []
+      summary: Метод для открытия SSE соединения с сервером
+      responses:
+        '200':
+          description: Успешный запрос
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: |
+                  code: SSE_CONNECTION_SET
+                  message: The SSE connection to the server is established
+        '401':
+          description: Некорректный или отсутствующий token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorInvalidToken"
+        'default':
+          description: "Все нестандартные ошибки: ошибки в запросе, сервер недоступен и т.д."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorDefault"            
+            
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT authorization using the Bearer scheme.  
+        Example: "Authorization: Bearer {token}"
+  schemas:
+    siteToken:
+      type: object
+      description: Постоянный токен, который используется для получения временного токена sessionToken
+      required: 
+        - siteToken
+      properties:
+        siteToken:
+          type: string
+          example: 123
+    sessionToken:
+      type: object
+      description: Временный токен, который используется для аутентификации запросов к серверу
+      required:
+        - sessionToken
+      properties:
+        sessionToken:
+            type: string
+            example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    ErrorInvalidToken:
+      type: object
+      description: Ошибка валидации токена, токен недействительный или отсутствует
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: INVALID_TOKEN
+        message:
+          type: string
+          example: Missing or invalid token
+    ErrorDefault:
+      type: object
+      description: "Все нестандартные ошибки: ошибки в запросе, сервер недоступен и т.д."
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    Message:
+      type: object
+      description: Сообщение 
+      required:
+        - input
+      properties:
+        input:
+          type: string
+          example: Tell me a three sentence bedtime story about a unicorn.
+    StateMessageReceived:
+      type: object
+      description: "Сообщение успешно принято сервером в обработку"
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: MESSAGE_RECEIVED
+        message:
+          type: string
+          example: The message has been received and accepted for processing
+    ErrorRateLimitSession:
+      type: object
+      description: Превышен лимит запросов на сессию
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: RATE_LIMIT_SESSION
+        message:
+          type: string
+          example: The message limit for the current session has been exceeded
+    ErrorRateLimitUser:
+      type: object
+      description: Превышен лимит запросов на пользователя
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: RATE_LIMIT_USER
+        message:
+          type: string
+          example: The message limit for the current user has been exceeded    
+
+          
+        
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
