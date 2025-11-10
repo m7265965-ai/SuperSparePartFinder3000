@@ -39,7 +39,7 @@ paths:
     post:
       security:
        - BearerAuth: []
-      summary: Методя для отправки сообщения на сервер
+      summary: Метод для отправки сообщения на сервер
       requestBody:
         description: Текст сообщения
         required: true
